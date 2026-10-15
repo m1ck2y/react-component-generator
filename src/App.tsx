@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { PromptInput } from './components/PromptInput';
 import { ComponentCard } from './components/ComponentCard';
 import { useComponentGenerator } from './hooks/useComponentGenerator';
+import { usePersistentState } from './hooks/usePersistentState';
+import { loadJSON, saveJSON } from './utils/storage';
+import { addToHistory } from './utils/promptHistory';
 import type { Provider } from './types';
 import './App.css';
 
@@ -10,10 +13,19 @@ const PROVIDER_CONFIG = {
   google: { label: 'Google', placeholder: 'AIza...' },
 } as const;
 
+type ApiKeys = Partial<Record<Provider, string>>;
+
 function App() {
-  const [apiKey, setApiKey] = useState('');
+  // 생성된 코드가 같은 페이지에서 실행되므로 키는 사용자가 동의한 경우에만 저장한다.
+  const [rememberKey, setRememberKey] = usePersistentState('rcg:rememberApiKey', false);
+  const [apiKeys, setApiKeys] = useState<ApiKeys>(() =>
+    rememberKey ? loadJSON<ApiKeys>('rcg:apiKeys', {}) : {},
+  );
   const [showKey, setShowKey] = useState(false);
-  const [provider, setProvider] = useState<Provider>('google');
+  const [provider, setProvider] = usePersistentState<Provider>('rcg:provider', 'google');
+  const [promptHistory, setPromptHistory] = usePersistentState<string[]>('rcg:promptHistory', []);
+  const apiKey = apiKeys[provider] ?? '';
+  const setApiKey = (key: string) => setApiKeys((prev) => ({ ...prev, [provider]: key }));
   const [envKeys, setEnvKeys] = useState<Record<Provider, boolean>>({
     anthropic: false,
     google: false,
@@ -28,6 +40,11 @@ function App() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    // 저장을 끄면 이전에 저장된 키도 비운다.
+    saveJSON('rcg:apiKeys', rememberKey ? apiKeys : {});
+  }, [rememberKey, apiKeys]);
+
   const hasEnvKey = envKeys[provider];
 
   const handleGenerate = (prompt: string) => {
@@ -35,12 +52,8 @@ function App() {
       alert(`${PROVIDER_CONFIG[provider].label} API 키를 입력하거나 .env에 설정해주세요.`);
       return;
     }
+    setPromptHistory((prev) => addToHistory(prev, prompt));
     generate(prompt, apiKey || undefined, provider);
-  };
-
-  const handleProviderChange = (newProvider: Provider) => {
-    setProvider(newProvider);
-    setApiKey('');
   };
 
   const activeProvider = PROVIDER_CONFIG[provider].label;
@@ -68,7 +81,7 @@ function App() {
 
       <main className="workspace">
         <section className="composer-panel" aria-label="컴포넌트 생성">
-          <PromptInput onGenerate={handleGenerate} isLoading={isLoading} />
+          <PromptInput onGenerate={handleGenerate} isLoading={isLoading} history={promptHistory} />
         </section>
 
         <aside className="settings-panel" aria-label="실행 설정">
@@ -81,7 +94,7 @@ function App() {
             <select
               id="provider"
               value={provider}
-              onChange={(e) => handleProviderChange(e.target.value as Provider)}
+              onChange={(e) => setProvider(e.target.value as Provider)}
             >
               {Object.entries(PROVIDER_CONFIG).map(([key, { label }]) => (
                 <option key={key} value={key}>
@@ -114,6 +127,19 @@ function App() {
                 {showKey ? '숨기기' : '보기'}
               </button>
             </div>
+            <label className="remember-key">
+              <input
+                type="checkbox"
+                checked={rememberKey}
+                onChange={(e) => setRememberKey(e.target.checked)}
+              />
+              이 브라우저에 키 저장
+            </label>
+            {rememberKey && (
+              <p className="remember-key-warning">
+                생성된 컴포넌트 코드가 이 페이지에서 실행되므로 저장된 키를 읽을 수 있습니다. 개인 PC에서만 사용하세요.
+              </p>
+            )}
             <p className={`key-status ${hasEnvKey ? 'key-status--ready' : ''}`}>
               {hasEnvKey ? '.env 키가 연결되어 있습니다.' : '직접 입력하거나 서버 환경변수를 설정하세요.'}
             </p>

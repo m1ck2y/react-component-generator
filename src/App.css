@@ -308,6 +308,22 @@
   border-color: var(--primary-hover);
 }
 
+.remember-key {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.remember-key-warning {
+  margin-top: 4px;
+  color: var(--danger);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .prompt-error {
   margin-top: 8px;
   color: var(--danger);

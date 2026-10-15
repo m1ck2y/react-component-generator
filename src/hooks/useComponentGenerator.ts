@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { GeneratedComponent, Provider } from '../types';
+import { usePersistentState } from './usePersistentState';
 
 interface UseComponentGeneratorReturn {
   components: GeneratedComponent[];
@@ -10,8 +11,16 @@ interface UseComponentGeneratorReturn {
   clearAll: () => void;
 }
 
+// localStorage에는 createdAt이 ISO 문자열로 저장되므로 Date로 되돌린다.
+const reviveComponents = (stored: GeneratedComponent[]) =>
+  stored.map((component) => ({ ...component, createdAt: new Date(component.createdAt) }));
+
 export function useComponentGenerator(): UseComponentGeneratorReturn {
-  const [components, setComponents] = useState<GeneratedComponent[]>([]);
+  const [components, setComponents] = usePersistentState<GeneratedComponent[]>(
+    'rcg:components',
+    [],
+    reviveComponents,
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,15 +55,15 @@ export function useComponentGenerator(): UseComponentGeneratorReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [setComponents]);
 
   const removeComponent = useCallback((id: string) => {
     setComponents((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+  }, [setComponents]);
 
   const clearAll = useCallback(() => {
     setComponents([]);
-  }, []);
+  }, [setComponents]);
 
   return { components, isLoading, error, generate, removeComponent, clearAll };
 }
