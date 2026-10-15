@@ -40,3 +40,6 @@ dist-ssr
 
 # 이력서 실습 결과 (가상 데이터, 실행마다 새로 생성)
 hiring-lab/results/
+
+# Python 캐시 (skill-creator 스크립트 실행 시 생성)
+__pycache__/
