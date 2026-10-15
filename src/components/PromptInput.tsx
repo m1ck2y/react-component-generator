@@ -4,6 +4,7 @@ import { validatePrompt } from '../utils/validation';
 interface PromptInputProps {
   onGenerate: (prompt: string) => void;
   isLoading: boolean;
+  history?: string[];
 }
 
 const EXAMPLES = [
@@ -15,7 +16,7 @@ const EXAMPLES = [
   '테이블 행 상세보기 패널. 선택한 고객의 기본 정보와 최근 활동 표시',
 ];
 
-export function PromptInput({ onGenerate, isLoading }: PromptInputProps) {
+export function PromptInput({ onGenerate, isLoading, history = [] }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
   // 제출 시 trim한 값을 보내므로 같은 값으로 검증한다.
   const trimmedPrompt = prompt.trim();
@@ -29,8 +30,8 @@ export function PromptInput({ onGenerate, isLoading }: PromptInputProps) {
     }
   };
 
-  const handleExampleClick = (example: string) => {
-    setPrompt(example);
+  const fillPrompt = (text: string) => {
+    setPrompt(text);
   };
 
   return (
@@ -69,13 +70,28 @@ export function PromptInput({ onGenerate, isLoading }: PromptInputProps) {
           {validationError}
         </p>
       )}
+      {history.length > 0 && (
+        <div className="prompt-examples" role="group" aria-label="최근 프롬프트">
+          <span className="examples-label">최근 프롬프트</span>
+          {history.map((item) => (
+            <button
+              key={item}
+              className="example-chip"
+              onClick={() => fillPrompt(item)}
+              type="button"
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="prompt-examples">
         <span className="examples-label">예시 프롬프트</span>
         {EXAMPLES.map((example) => (
           <button
             key={example}
             className="example-chip"
-            onClick={() => handleExampleClick(example)}
+            onClick={() => fillPrompt(example)}
             type="button"
           >
             {example}
